@@ -4,11 +4,18 @@
       <div>
         # 1
       </div>
-      <div class="game" :class="{'press-Left': ArrowLeft, 'press-Down': ArrowDown, 'press-Right': ArrowRight, 'press-Up': ArrowUp}">
-        <div v-for="row in mapClass" :key="JSON.stringify(row)" class="row-square">
-          <div v-for="(el, i) in row" :key="[el, i].join('-')" class="square" :class="el" />
+      <div class="game" :class="{'pressLeft': ArrowLeft, 'pressDown': ArrowDown, 'pressRight': ArrowRight, 'pressUp': ArrowUp}">
+        <div
+          v-for="(row, j) in map"
+          :key="JSON.stringify([j, row])"
+          class="row-square"
+        >
+          <div v-for="(el, i) in row" :key="[el, i].join('-')" class="square" :class="['empty', 'painted', 'player1'][el]" />
         </div>
       </div>
+      <pre>
+        {{ validMoves }}
+      </pre>
       <div>
         &#x21bb;
       </div>
@@ -34,22 +41,79 @@ export default {
   },
   computed: {
     mapClass () {
-      const style = ['empty', '', 'player1']
+      const style = ['empty', 'painted', 'player1']
       return this.map.map((row) => {
         return row.map(e => style[e])
       })
+    },
+    validMoves () {
+      const h = this.map.length
+      const w = this.map[0].length
+      let hPos = 0
+      let wPos = 0
+      for (hPos = 0; hPos < h; hPos += 1) {
+        wPos = this.map[hPos].indexOf(2)
+        if (wPos > -1) {
+          break
+        }
+      }
+      return {
+        up: hPos > 0 || (this.map[hPos - 1] && this.map[hPos - 1][wPos] === 0),
+        down: hPos < h - 1 || (this.map[hPos + 1] && this.map[hPos + 1][wPos] === 0),
+        left: wPos > 0 || this.map[hPos][wPos - 1] === 0,
+        right: wPos < w - 1 || this.map[hPos][wPos + 1] === 0,
+        wPos,
+        hPos
+      }
     }
   },
+  watch: {
+    ArrowLeft () {
+      if (this.validMoves.left && !this.ArrowRight && !this.ArrowUp && !this.ArrowDown && !this.ArrowLeft) {
+        const { wPos, hPos } = this.validMoves
+        this.map[hPos][wPos - 1] = this.map[hPos][wPos]
+        this.map[hPos][wPos] = 1
+      }
+    },
+    ArrowDown () {
+      if (this.validMoves.down && !this.ArrowRight && !this.ArrowUp && !this.ArrowDown && !this.ArrowLeft) {
+        const { wPos, hPos } = this.validMoves
+        this.map[hPos + 1][wPos] = this.map[hPos][wPos]
+        this.map[hPos][wPos] = 1
+      }
+    },
+    ArrowRight () {
+      if (this.validMoves.right && !this.ArrowRight && !this.ArrowUp && !this.ArrowDown && !this.ArrowLeft) {
+        const { wPos, hPos } = this.validMoves
+        this.map[hPos][wPos + 1] = this.map[hPos][wPos]
+        this.map[hPos][wPos] = 1
+      }
+    },
+    ArrowUp () {
+      if (this.validMoves.up && !this.ArrowRight && !this.ArrowUp && !this.ArrowDown && !this.ArrowLeft) {
+        const { wPos, hPos } = this.validMoves
+        // debugger
+        this.map[hPos - 1][wPos] = this.map[hPos][wPos]
+        this.map[hPos][wPos] = 1
+        console.log('move up', this.mapClass)
+      }
+    }
+  },
+  // :class="{ vUp: validMoves.up, vDown: validMoves.down, vLeft: validMoves.left, vRight: validMoves.right }"
   mounted () {
     const valid = ['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowUp']
     document.body.onkeyup = (e) => {
       if (valid.includes(e.key)) {
-        this[e.key] = false
+        this.$nextTick(() => {
+          this[e.key] = false
+        })
       }
     }
     document.body.onkeydown = (e) => {
       if (valid.includes(e.key)) {
-        this[e.key] = true
+        this.$nextTick(() => {
+          this[e.key] = true
+        })
       }
     }
   }
@@ -68,6 +132,11 @@ export default {
   text-align: center;
   flex-direction: column;
 }
+
+.square.painted {
+  background: pink;
+}
+
 .square.player1::after {
   content: '○';
   color: #fff;
@@ -75,17 +144,21 @@ export default {
   transition: all 150ms ease-out;
 }
 
-.press-Left .square.player1::after {
+.pressLeft .square.player1::after {
   padding-right: 25px;
 }
-.press-Down .square.player1::after {
+.pressDown .square.player1::after {
   padding-top: 25px;
 }
-.press-Right .square.player1::after {
+.pressRight .square.player1::after {
   padding-left: 25px;
 }
-.press-Up .square.player1::after {
+.pressUp .square.player1::after {
   padding-bottom: 25px;
+}
+
+.pressUp .vUp .square {
+  box-shadow: 30px 0px 8px -1px rgba(0,0,0,0.75);
 }
 
 .square {
