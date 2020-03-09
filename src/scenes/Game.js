@@ -3,17 +3,17 @@ import Phaser from 'phaser'
 let player
 
 const map = `
-111
-101
-111
-111
-109
-`.trim().split(`\n`).map(e => e.trim().split('').map(e => parseInt(e, 10)))
+1111111
+1111111
+1109018
+1100011
+1100011
+`.trim().split('\n').map(e => e.trim().split('').map(e => parseInt(e, 10)))
 
 const validMoves = map.map(r => r.map(e => e === 1))
 console.log(validMoves)
 const players = []
-const gridSize = 64
+const gridSize = 30
 window.players = players
 function calculateMoves (player) {
   player.validMoves = {
@@ -30,7 +30,6 @@ export default class extends Phaser.Scene {
   }
 
   eat (j, i) {
-    console.log(j, i)
     validMoves[i][j] = false
     window.group.add(this.add.rectangle(gridSize * j, gridSize * i, gridSize, gridSize, 0xff0000).setOrigin(0.5))
   }
@@ -64,12 +63,16 @@ export default class extends Phaser.Scene {
           player.add(window.circle)
           window.group.add(player)
           players.push({ player, x: j, y: i })
-          console.log(calculateMoves(players[0]))
         }
       }
     }
-    window.group.setX(parseInt(window.screen.width - (window.group.getBounds().width)) / 2)
-    window.group.setY(parseInt(window.screen.height - (window.group.getBounds().height)) / 2)
+    players.forEach(p => {
+      window.group.bringToTop(p.player)
+      calculateMoves(p)
+    })
+
+    window.group.setX(parseInt((411 - ((map[0].length - 1) * gridSize)) / 2))
+    window.group.setY((731 - ((map.length - 1) * gridSize)) / 2)
 
     /*
     // window.group.add(this.add.rectangle(0, 0, 0, 40, 0x6666ff).setOrigin(0))
@@ -129,6 +132,7 @@ export default class extends Phaser.Scene {
       })
       calculateMoves(p)
       console.log(p.validMoves)
+      console.log(validMoves)
     })
   }
 
