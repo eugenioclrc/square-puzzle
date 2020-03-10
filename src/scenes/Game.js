@@ -10,10 +10,14 @@ const map = `
 1100011
 `.trim().split('\n').map(e => e.trim().split('').map(e => parseInt(e, 10)))
 
+const mapTiles = map.map(r => r.map(e => {
+  return e === 0 ? -1 : 0
+}))
+
 const validMoves = map.map(r => r.map(e => e === 1))
 console.log(validMoves)
 const players = []
-const gridSize = 30
+const gridSize = 128
 window.players = players
 function calculateMoves (player) {
   player.validMoves = {
@@ -22,19 +26,61 @@ function calculateMoves (player) {
     up: (validMoves[player.y - 1] && validMoves[player.y - 1][player.x]) || false,
     down: (validMoves[player.y + 1] && validMoves[player.y + 1][player.x]) || false
   }
+  players.forEach(p => {
+    player.validMoves.left = player.validMoves.left && (!(p.x === (player.x - 1) && p.y === player.y))
+    player.validMoves.right = player.validMoves.right && (!(p.x === (player.x + 1) && p.y === player.y))
+  })
 }
 
+const prev = []
 export default class extends Phaser.Scene {
   constructor () {
     super({ key: 'Game' })
   }
 
-  eat (j, i) {
+  eat (j, i, from, pId) {
+    let defaultSprite = 0
+    if (from === 'left' && (prev[pId] === 'left' || !prev[pId])) {
+      defaultSprite = 12
+    }
+    if (from === 'right' && (prev[pId] === 'right' || !prev[pId])) {
+      defaultSprite = 12
+    }
+    if (from === 'left' && prev[pId] === 'up') {
+      defaultSprite = 2
+    }
+    if (from === 'left' && prev[pId] === 'down') {
+      defaultSprite = 14
+    }
+    if (from === 'right' && prev[pId] === 'down') {
+      defaultSprite = 13
+      // 9
+      // 12
+    }
+    if (from === 'up' && prev[pId] === 'left') {
+      defaultSprite = 13
+    }
+    if (from === 'up' && prev[pId] === 'right') {
+      defaultSprite = 14
+    }
+    if (from === 'right' && prev[pId] === 'up') {
+      defaultSprite = 1
+    }
+    if (from === 'down' && prev[pId] === 'left') {
+      defaultSprite = 1
+    }
+    if (from === 'down' && prev[pId] === 'right') {
+      defaultSprite = 2
+    }
     validMoves[i][j] = false
-    window.group.add(this.add.rectangle(gridSize * j, gridSize * i, gridSize, gridSize, 0xff0000).setOrigin(0.5))
+    mapTiles[i][j] = defaultSprite
+    window.group.add(this.add.sprite(gridSize * j, gridSize * i, 'roadTextures', defaultSprite).setOrigin(0.5))
+    prev[pId] = from
   }
 
   create () {
+    this.scale.lockOrientation('portrait')
+    this.cameras.main.backgroundColor = Phaser.Display.Color.HexStringToColor('#67caf5')
     this.animationsEnd = true
     window.group = this.add.container()
     // window.group.setOrigin(0.5, 0.5)
@@ -45,13 +91,15 @@ export default class extends Phaser.Scene {
       console.log(i)
       for (let j = 0; j < map[0].length; j += 1) {
         if (map[i][j] > 0) {
-          r = this.add.rectangle(gridSize * j, gridSize * i, gridSize, gridSize, 0x6666ff).setOrigin(0.5)
+          // r = this.add.rectangle(gridSize * j, gridSize * i, gridSize, gridSize, 0x6666ff).setOrigin(0.5)
+          r = this.add.sprite(gridSize * j, gridSize * i, 'roadTextures', 24).setOrigin(0.5)
+          // r.setScale(0.5, 0.5)
           // r.setStrokeStyle(1, 0xffff00, 0.5)
           window.group.add(r)
         }
         if (map[i][j] === 2 || map[i][j] > 5) {
           // pintado
-          this.eat(j, i)
+          // this.eat(j, i)
         }
         if (map[i][j] > 5) {
           player = this.add.container()
@@ -71,8 +119,8 @@ export default class extends Phaser.Scene {
       calculateMoves(p)
     })
 
-    window.group.setX(parseInt((411 - ((map[0].length - 1) * gridSize)) / 2))
-    window.group.setY((731 - ((map.length - 1) * gridSize)) / 2)
+    window.group.setX(parseInt(((375 * 4) - ((map[0].length - 1) * gridSize)) / 2))
+    window.group.setY(((667 * 4) - ((map.length - 1) * gridSize)) / 2)
 
     /*
     // window.group.add(this.add.rectangle(0, 0, 0, 40, 0x6666ff).setOrigin(0))
@@ -99,7 +147,8 @@ export default class extends Phaser.Scene {
     const onComplete = () => {
       this.animationsEnd = true
     }
-    players.forEach(p => {
+
+    players.forEach((p, pId) => {
       if (!p.validMoves[direction]) {
         return
       }
@@ -113,7 +162,7 @@ export default class extends Phaser.Scene {
         left: -1,
         right: +1
       }
-      this.eat(p.x, p.y)
+      this.eat(p.x, p.y, direction, pId)
       if (['up', 'down'].includes(direction)) {
         y = p.player.y + (mul[direction] * gridSize)
         p.y = p.y + mul[direction]
@@ -121,6 +170,7 @@ export default class extends Phaser.Scene {
         x = p.player.x + (mul[direction] * gridSize)
         p.x = p.x + mul[direction]
       }
+      window.group.bringToTop(p.player)
 
       this.tweens.add({
         targets: p.player,
@@ -130,9 +180,25 @@ export default class extends Phaser.Scene {
         duration: 300,
         ease: 'Power2'
       })
+    })
+
+    // despues de mover a los jugadores
+    players.forEach((p, pId) => {
       calculateMoves(p)
-      console.log(p.validMoves)
-      console.log(validMoves)
+      if (Object.values(p.validMoves).filter(e => e).length === 0) {
+        if (p.killed) {
+          return
+        }
+        this.eat(p.x, p.y, direction, pId)
+        window.group.bringToTop(p.player)
+        this.tweens.add({
+          targets: p.player,
+          alpha: 0.4,
+          duration: 300,
+          ease: 'Power2'
+        })
+        p.killed = true
+      }
     })
   }
 
