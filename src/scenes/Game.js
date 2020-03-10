@@ -79,6 +79,11 @@ export default class extends Phaser.Scene {
   }
 
   create () {
+    this.swipeInput = this.rexGestures.add.swipe({
+      dir: '4dir',
+      velocityThreshold: 1000
+    })
+
     this.scale.lockOrientation('portrait')
     this.cameras.main.backgroundColor = Phaser.Display.Color.HexStringToColor('#67caf5')
     this.animationsEnd = true
@@ -219,6 +224,17 @@ export default class extends Phaser.Scene {
       this.move('left')
     } else {
       // reset anims
+    }
+
+    if (this.swipeInput.isSwiped) {
+      const directions = ['left', 'right', 'up', 'down']
+      let dir
+      for (let i = 0, cnt = directions.length; i < cnt; i++) {
+        dir = directions[i]
+        if (this.swipeInput[dir]) {
+          this.move(dir)
+        }
+      }
     }
   }
 }

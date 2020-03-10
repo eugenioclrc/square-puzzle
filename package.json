@@ -15,7 +15,8 @@
     "url": "https://github.com/rafaeldelboni/phaser3-es6-webpack4.git"
   },
   "dependencies": {
-    "phaser": "^3.22.0"
+    "phaser": "^3.22.0",
+    "phaser3-rex-plugins": "^1.1.8"
   },
   "devDependencies": {
     "@babel/core": "^7.8.7",
